@@ -1,0 +1,98 @@
+[
+ {
+  "sku": "MEH-NK-01",
+  "name": "Mehr Pearl Strand Necklace",
+  "stock": 45,
+  "status": "In Stock"
+ },
+ {
+  "sku": "MIR-ER-02",
+  "name": "Nila Sapphire Drop Earrings",
+  "stock": 18,
+  "status": "In Stock"
+ },
+ {
+  "sku": "GUL-RG-03",
+  "name": "Gulab Pink Stone Ring",
+  "stock": 12,
+  "status": "In Stock"
+ },
+ {
+  "sku": "IRA-BG-04",
+  "name": "Ira Textured Gold Bangles",
+  "stock": 0,
+  "status": "Out of Stock"
+ },
+ {
+  "sku": "HER-NK-05",
+  "name": "Heritage Gold Necklace",
+  "stock": 18,
+  "status": "In Stock"
+ },
+ {
+  "sku": "MIR-ER-06",
+  "name": "Mira Rose Gold Drop Earrings",
+  "stock": 120,
+  "status": "In Stock"
+ },
+ {
+  "sku": "ZIY-BR-07",
+  "name": "Ziya Polki Choker Set",
+  "stock": 64,
+  "status": "In Stock"
+ },
+ {
+  "sku": "SAA-BR-08",
+  "name": "Saanvi Gold Link Bracelet",
+  "stock": 44,
+  "status": "In Stock"
+ },
+ {
+  "sku": "AUR-RG-09",
+  "name": "Aurelia Solitaire Ring",
+  "stock": 32,
+  "status": "In Stock"
+ },
+ {
+  "sku": "MEH-ER-10",
+  "name": "Meher Gold Knot Earrings",
+  "stock": 37,
+  "status": "In Stock"
+ },
+ {
+  "sku": "TAR-NK-11",
+  "name": "Tara Silver Pendant Necklace",
+  "stock": 22,
+  "status": "In Stock"
+ },
+ {
+  "sku": "KAV-ER-12",
+  "name": "Kavya Kundan Stud Earrings",
+  "stock": 52,
+  "status": "In Stock"
+ },
+ {
+  "sku": "RUH-NK-13",
+  "name": "Ruhani Rose Gold Pendant",
+  "stock": 29,
+  "status": "In Stock"
+ },
+ {
+  "sku": "LEE-BR-14",
+  "name": "Leela Diamond Tennis Bracelet",
+  "stock": 26,
+  "status": "In Stock"
+ },
+ {
+  "sku": "NOO-RG-15",
+  "name": "Noor Diamond Halo Ring",
+  "stock": 16,
+  "status": "In Stock"
+ },
+ {
+  "sku": "ANI-BR-16",
+  "name": "Anika Floral Bracelet",
+  "stock": 34,
+  "status": "In Stock"
+ }
+]

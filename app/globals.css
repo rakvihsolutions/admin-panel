@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+#barcode-print-sheet { display: none; }
+@media print {
+  /* While the barcode label modal is open, print only its label sheet. */
+  body:has(> #barcode-print-sheet) > *:not(#barcode-print-sheet) { display: none !important; }
+  body:has(> #barcode-print-sheet) { margin: 0; background: #fff; }
+  #barcode-print-sheet { display: block; }
+  .barcode-print-label { display: block; break-after: page; page-break-after: always; }
+  .barcode-print-label:last-child { break-after: auto; page-break-after: auto; }
+}
+
+/* Our own show/hide buttons replace Edge's built-in password eye. */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}

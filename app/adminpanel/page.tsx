@@ -47,7 +47,8 @@ interface PosTransaction {
 }
 
 // POS bills are saved in the browser like the rest of the demo data, so they survive a refresh.
-const posHistoryStore = createStore<PosTransaction[]>('demo.admin.posHistory.v4', [
+// The register starts empty; these sample bills are kept for demos (also in supabase/seed.sql).
+const SAMPLE_POS_HISTORY: PosTransaction[] = [
   {
     id: 'tx-1',
     receiptNo: 'REC-2026-8091',
@@ -88,7 +89,9 @@ const posHistoryStore = createStore<PosTransaction[]>('demo.admin.posHistory.v4'
       { productId: 'retro-compact-camera', name: 'Anika Floral Bracelet', qty: 1, price: 4799 },
     ],
   },
-], Array.isArray);
+];
+void SAMPLE_POS_HISTORY;
+const posHistoryStore = createStore<PosTransaction[]>('demo.admin.posHistory.v5', [], Array.isArray);
 
 
 type AdminTab =
@@ -431,10 +434,7 @@ export default function EcommerceAdminPanel() {
   const [visiblePasswords, setVisiblePasswords] = useState<string[]>([]);
 
   // POS State
-  const [posCart, setPosCart] = useState<PosCartItem[]>([
-    { product: products[0], quantity: 1 },
-    { product: products[2], quantity: 1 },
-  ]);
+  const [posCart, setPosCart] = useState<PosCartItem[]>([]);
   const [posSearchTerm, setPosSearchTerm] = useState('');
   const [isPosCameraOpen, setIsPosCameraOpen] = useState(false);
   const [posCustomerName, setPosCustomerName] = useState('');
@@ -4214,17 +4214,17 @@ export default function EcommerceAdminPanel() {
                 </button>
                 <div className="pt-5 border-t border-[#E3E8EF] space-y-2">
                   <p className="text-[12px] font-extrabold uppercase tracking-wider text-[#6F7E92]">Demo Data</p>
-                  <p className="text-[12px] text-[#5B6B80] font-semibold">Products, orders, coupons and the rest are saved in this browser and shared with the website. Resetting puts back the original sample data everywhere.</p>
+                  <p className="text-[12px] text-[#5B6B80] font-semibold">Products, orders, coupons and the rest are saved in this browser and shared with the website. Clearing empties the store everywhere; the demo login stays.</p>
                   <button
                     onClick={() => {
-                      if (!confirm('Reset all products, orders, customers, coupons, banners and settings to the original sample data?')) return;
+                      if (!confirm('Delete all products, orders, customers, coupons, banners and POS bills, and reset settings?')) return;
                       resetDemoData();
                       posHistoryStore.reset();
-                      notify('Demo data reset to the original samples');
+                      notify('All store data cleared');
                     }}
                     className="w-full py-3 bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-full text-[13px] transition-all border border-red-200"
                   >
-                    Reset All Demo Data
+                    Clear All Store Data
                   </button>
                 </div>
               </div>

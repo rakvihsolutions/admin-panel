@@ -4,8 +4,8 @@
 -- 7 customers, 6 website orders (2 with Shiprocket shipments), 3 POS bills,
 -- 4 hero banners, 6 Instagram posts, 3 videos and 8 storefront themes.
 --
--- Safe to run once on a fresh database (after the migrations).
--- To start a real client project, run clear_demo_data.sql afterwards.
+-- OPTIONAL — not part of full_setup.sql. Run it only if you want sample data to show
+-- a client. Remove it again with clear_demo_data.sql.
 -- =============================================================================
 begin;
 

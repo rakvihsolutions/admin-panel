@@ -299,7 +299,7 @@ create table public.coupons (
 -- -----------------------------------------------------------------------------
 -- Orders (website + admin), lines, shipments, emails, status history
 -- -----------------------------------------------------------------------------
-create sequence public.order_number_seq start 98217;
+create sequence public.order_number_seq start 1001;   -- first order: ORD-1001
 
 create table public.orders (
   id                uuid primary key default gen_random_uuid(),
@@ -401,7 +401,7 @@ create index order_status_history_order_idx on public.order_status_history (orde
 -- -----------------------------------------------------------------------------
 -- POS (in-store register) bills, lines and the exact variant stock each line took
 -- -----------------------------------------------------------------------------
-create sequence public.pos_receipt_seq start 8092;
+create sequence public.pos_receipt_seq start 1001;    -- first bill: REC-<year>-1001
 
 create table public.pos_transactions (
   id               uuid primary key default gen_random_uuid(),

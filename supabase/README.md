@@ -6,12 +6,14 @@ Everything the admin panel needs in Supabase: tables, business rules, security, 
 
 1. Create a new project at supabase.com.
 2. Open **SQL Editor**, paste all of [`full_setup.sql`](full_setup.sql) and click **Run**.
-3. Sign in with the demo admin `demo.admin@example.com` / `shop123` (shopper login: `demo.shopper@example.com` / `demo1234`).
-4. To hand the project to a real client:
-   - run [`clear_demo_data.sql`](clear_demo_data.sql) to remove the sample products, orders and customers;
+   The store starts **empty**: no products, categories, orders or customers, and order numbers start at `ORD-1001`.
+3. Sign in with the one-click demo logins: admin `demo.admin@example.com` / `shop123`, shopper `demo.shopper@example.com` / `demo1234`.
+4. When the client goes live:
    - create the owner in **Authentication → Add user**;
    - run `select public.make_super_admin('owner@client.com');`;
-   - delete the demo logins (the last line of `clear_demo_data.sql`).
+   - remove the demo logins with `delete from auth.users where email in ('demo.admin@example.com', 'demo.shopper@example.com');`.
+
+To show a client a store full of sample jewellery, run [`seed.sql`](seed.sql) (optional). [`clear_demo_data.sql`](clear_demo_data.sql) removes it again.
 5. In **Project Settings → API**, copy the URL and keys into the app's `.env.local`:
    ```
    NEXT_PUBLIC_SUPABASE_URL=...
@@ -19,7 +21,7 @@ Everything the admin panel needs in Supabase: tables, business rules, security, 
    SUPABASE_SERVICE_ROLE_KEY=...      # server only, never in the browser
    ```
 
-If you use the Supabase CLI instead, this folder already has the CLI layout: `supabase db reset` runs `migrations/` and then `seed.sql`. Run `demo_logins.sql` separately if you want the demo logins.
+If you use the Supabase CLI instead, note that `supabase db reset` runs `migrations/` and then `seed.sql`, which loads the sample data. Delete or rename `seed.sql` if you want an empty store, and run `demo_logins.sql` separately.
 
 ## What's in this folder
 
@@ -32,10 +34,10 @@ If you use the Supabase CLI instead, this folder already has the CLI layout: `su
 | `migrations/…500_storage.sql` | Storage buckets and who can upload to them. |
 | `migrations/…600_views.sql` | Views for the dashboard, reports, customers, inventory and catalog. |
 | `migrations/…700_defaults.sql` | The `store_settings` row and the 8 built-in themes. These are app defaults, not demo data. |
-| `seed.sql` | Demo data, generated from `app/adminpanel/demo-data.ts`. |
-| `demo_logins.sql` | Demo admin and shopper accounts. |
-| `full_setup.sql` | All of the above in one file. It is generated, so don't edit it by hand. |
-| `clear_demo_data.sql` | Empties the store for a real client. Logins, themes and settings stay. |
+| `demo_logins.sql` | One-click demo admin and shopper accounts. |
+| `full_setup.sql` | All migrations plus the demo logins in one file, giving an empty store. It is generated, so don't edit it by hand. |
+| `seed.sql` | **Optional** sample data from `app/adminpanel/demo-data.ts`. Not included in `full_setup.sql`. |
+| `clear_demo_data.sql` | Removes the sample data again. Logins, themes and settings stay. |
 | `tests/` | Automated tests that build the whole database and check it works. |
 
 ### Tables

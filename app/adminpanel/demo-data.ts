@@ -858,21 +858,22 @@ const SEED_INSTAGRAM: InstagramPost[] = [
 // Keep account and payment settings stable while the jewellery demo catalog starts fresh.
 const KEY = (name: string) => `demo.v2.${name}`;
 const SAMPLE_KEY = (name: string) => `demo.v3.${name}`;
-// The catalog moved to v4 when every piece got its own photos, so earlier saved samples are replaced.
-const CATALOG_KEY = (name: string) => `demo.v4.${name}`;
+// v5: the store now starts EMPTY (no products, orders, customers…); only the demo logins remain.
+// Browsers that saved the old v4 sample catalog start fresh. The samples are kept in SAMPLE_DATA below.
+const CATALOG_KEY = (name: string) => `demo.v5.${name}`;
 
-export const productsStore = createStore(CATALOG_KEY('products'), SEED_PRODUCTS_ALL, Array.isArray);
-export const categoriesStore = createStore(CATALOG_KEY('categories'), SEED_CATEGORIES, Array.isArray);
-export const subCategoriesStore = createStore(CATALOG_KEY('subCategories'), SEED_SUB_CATEGORIES, Array.isArray);
-export const subSubCategoriesStore = createStore(CATALOG_KEY('subSubCategories'), SEED_SUB_SUB_CATEGORIES, Array.isArray);
-export const sizeOptionsStore = createStore(CATALOG_KEY('sizes'), SEED_SIZES, Array.isArray);
-export const colorOptionsStore = createStore(CATALOG_KEY('colors'), SEED_COLORS, Array.isArray);
-export const tagOptionsStore = createStore(CATALOG_KEY('tags'), SEED_TAGS, Array.isArray);
-export const couponsStore = createStore(CATALOG_KEY('coupons'), SEED_COUPONS, Array.isArray);
-export const ordersStore = createStore(CATALOG_KEY('orders'), SEED_ORDERS, Array.isArray);
-export const customersStore = createStore(CATALOG_KEY('customers'), SEED_CUSTOMERS, Array.isArray);
-export const bannersStore = createStore(CATALOG_KEY('banners'), SEED_BANNERS, Array.isArray);
-export const instagramStore = createStore(CATALOG_KEY('instagram'), SEED_INSTAGRAM, Array.isArray);
+export const productsStore = createStore<Product[]>(CATALOG_KEY('products'), [], Array.isArray);
+export const categoriesStore = createStore<CategoryItem[]>(CATALOG_KEY('categories'), [], Array.isArray);
+export const subCategoriesStore = createStore<SubCategoryItem[]>(CATALOG_KEY('subCategories'), [], Array.isArray);
+export const subSubCategoriesStore = createStore<SubSubCategoryItem[]>(CATALOG_KEY('subSubCategories'), [], Array.isArray);
+export const sizeOptionsStore = createStore<SizeOption[]>(CATALOG_KEY('sizes'), [], Array.isArray);
+export const colorOptionsStore = createStore<ColorOption[]>(CATALOG_KEY('colors'), [], Array.isArray);
+export const tagOptionsStore = createStore<TagOption[]>(CATALOG_KEY('tags'), [], Array.isArray);
+export const couponsStore = createStore<Coupon[]>(CATALOG_KEY('coupons'), [], Array.isArray);
+export const ordersStore = createStore<Order[]>(CATALOG_KEY('orders'), [], Array.isArray);
+export const customersStore = createStore<Customer[]>(CATALOG_KEY('customers'), [], Array.isArray);
+export const bannersStore = createStore<HeroBanner[]>(CATALOG_KEY('banners'), [], Array.isArray);
+export const instagramStore = createStore<InstagramPost[]>(CATALOG_KEY('instagram'), [], Array.isArray);
 // Product videos made in Admin → Videos and shown on the storefront (same storage key as before).
 export interface EcommerceVideo {
   id: string;
@@ -890,7 +891,7 @@ export const DEMO_VIDEO_URL = 'https://interactive-examples.mdn.mozilla.net/medi
 // The original sample link no longer serves video, so saved demo data falls back to the working clip.
 const DEAD_SAMPLE_VIDEO = 'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4';
 
-export const videosStore = createStore<EcommerceVideo[]>('demo.admin.videos.v4', [
+const SEED_VIDEOS: EcommerceVideo[] = [
   {
     id: 'vid-1',
     title: 'Ziya Polki Choker: Craft & Detail',
@@ -921,7 +922,20 @@ export const videosStore = createStore<EcommerceVideo[]>('demo.admin.videos.v4',
     videoUrl: DEMO_VIDEO_URL,
     dateAdded: '2026-08-10',
   },
-], Array.isArray);
+];
+
+export const videosStore = createStore<EcommerceVideo[]>('demo.admin.videos.v5', [], Array.isArray);
+
+/**
+ * The original sample jewellery store (16 products, 6 orders, 7 customers, coupons, banners…), kept for
+ * demos. The store starts empty; the same data also lives in supabase/seed.sql.
+ */
+export const SAMPLE_DATA = {
+  products: SEED_PRODUCTS_ALL, categories: SEED_CATEGORIES, subCategories: SEED_SUB_CATEGORIES,
+  subSubCategories: SEED_SUB_SUB_CATEGORIES, sizes: SEED_SIZES, colors: SEED_COLORS, tags: SEED_TAGS,
+  coupons: SEED_COUPONS, orders: SEED_ORDERS, customers: SEED_CUSTOMERS, banners: SEED_BANNERS,
+  instagram: SEED_INSTAGRAM, videos: SEED_VIDEOS,
+};
 
 /** The link to actually play: a YouTube embed, or the file URL (with the dead sample link swapped out). */
 export function playableVideo(url: string): { kind: 'youtube' | 'file'; src: string } {
@@ -1087,7 +1101,7 @@ const SHARED_STORES = [
   themeSettingsStore, storeDetailsStore,
 ];
 
-/** Puts every shared list back to the sample data, for both the admin and the website. */
+/** Empties every shared list (and resets settings), for both the admin and the website. Demo logins stay. */
 export function resetDemoData() {
   SHARED_STORES.forEach((store) => (store as Store<unknown>).reset());
 }

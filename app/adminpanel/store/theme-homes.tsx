@@ -293,10 +293,12 @@ function LifestyleHome() {
                 <Photo src={c.image} alt={c.name} width={600} className="h-full w-full object-cover" />
               </a>
             ))}
-            <span className="float absolute left-[36%] bottom-[6%] px-4 py-3 rounded-[18px] bg-white text-[var(--st-ink)] shadow-xl">
-              <span className="block text-[11px] font-semibold text-[#6F7E92]">Deals from</span>
-              <span className="block text-[20px] font-bold">{inr(Math.min(...d.inStock.map((p) => p.price)))}</span>
-            </span>
+            {d.inStock.length > 0 && (
+              <span className="float absolute left-[36%] bottom-[6%] px-4 py-3 rounded-[18px] bg-white text-[var(--st-ink)] shadow-xl">
+                <span className="block text-[11px] font-semibold text-[#6F7E92]">Deals from</span>
+                <span className="block text-[20px] font-bold">{inr(Math.min(...d.inStock.map((p) => p.price)))}</span>
+              </span>
+            )}
           </div>
         </div>
       </section>

@@ -6,7 +6,7 @@ import { VideoPlayerModal } from '../video-player';
 import {
   bannersStore, instagramStore, subCategoriesStore, subSubCategoriesStore, sizeOptionsStore, videosStore, recordVideoView,
   stockForVariant, productPhotos, percentOff, photoUrl, sizeTotal, colorTotal, variantSizes, variantColors,
-  FREE_DELIVERY_FROM,
+  FREE_DELIVERY_FROM, PHOTO_URLS,
   type Product, type HeroBanner, type EcommerceVideo, useStoreDetails,
 } from '../demo-data';
 import {
@@ -182,8 +182,9 @@ function Hero({ slides }: { slides: HeroSlide[] }) {
 export const bannerSlides = (banners: HeroBanner[]): HeroSlide[] =>
   banners.map((b) => ({ id: b.id, title: b.title, subtitle: b.subtitle, image: b.imageUrl, mobileImage: b.mobileImageUrl, ctaText: b.ctaText, ctaLink: b.ctaLink, textColor: b.textColor }));
 
+// Always one slide, so the hero still works in an empty store (no banners or products yet).
 export const fallbackSlides = (product?: Product): HeroSlide[] =>
-  product ? [{ id: 'static', title: 'Fewer things. Better ones.', subtitle: 'Thoughtfully finished jewellery, chosen for the moments you will treasure.', image: product.image, mobileImage: '', ctaText: 'Shop the collection', ctaLink: '#/shop', textColor: '#ffffff' }] : [];
+  [{ id: 'static', title: 'Fewer things. Better ones.', subtitle: 'Thoughtfully finished jewellery, chosen for the moments you will treasure.', image: product?.image || PHOTO_URLS[0], mobileImage: '', ctaText: 'Shop the collection', ctaLink: '#/shop', textColor: '#ffffff' }];
 
 const PERKS = [
   ['shield', 'Quality-checked jewellery'],

@@ -1,5 +1,5 @@
 // Runs the whole Supabase setup on a throwaway local Postgres 17 (PGlite) and checks that it works:
-// schema, demo data, stock/coupon/order/POS rules, and who-can-see-what (RLS).
+// schema, demo logins, stock/coupon/order/POS rules, and who-can-see-what (RLS).
 //   cd supabase/tests && npm install && npm test
 import { PGlite } from '@electric-sql/pglite';
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
@@ -10,11 +10,12 @@ const read = (f) => fs.readFileSync(new URL(f, import.meta.url), 'utf8');
 let passed = 0;
 let failed = 0;
 
-async function freshDb({ combined = false } = {}) {
+async function freshDb({ combined = false, withSeed = false } = {}) {
   const db = new PGlite({ extensions: { pgcrypto } });
   await db.exec(read('./supabase-stub.sql'));
   if (combined) await db.exec(buildFullSetup());
   else for (const [, sql] of fullSetupParts()) await db.exec(sql);
+  if (withSeed) await db.exec(read('../seed.sql'));
   return db;
 }
 
@@ -72,7 +73,26 @@ async function createUser(db, email, fullName) {
 
 // =============================================================================
 console.log('\nSetup');
-const db = await freshDb();
+
+await test('full_setup.sql gives an EMPTY store with only the demo logins', async () => {
+  const db2 = await freshDb({ combined: true });
+  const r = await one(db2, `select
+    (select count(*) from public.products) + (select count(*) from public.categories) + (select count(*) from public.orders)
+    + (select count(*) from public.coupons) + (select count(*) from public.pos_transactions)
+    + (select count(*) from public.hero_banners) + (select count(*) from public.videos) + (select count(*) from public.sizes) as data_rows,
+    (select string_agg(c.email, ',') from public.customers c) as customers,
+    (select string_agg(email || ':' || role, ',' order by email) from public.profiles) as logins,
+    (select count(*) from public.themes) as themes, (select name from public.store_settings) as store`);
+  eq([num(r.data_rows), num(r.themes), r.store], [0, 8, 'My Store']);
+  eq(r.customers, 'demo.shopper@example.com', 'only the demo shopper\'s own account row');
+  eq(r.logins, 'demo.admin@example.com:super_admin,demo.shopper@example.com:customer');
+  const ok = await one(db2, `select encrypted_password = extensions.crypt('shop123', encrypted_password) ok from auth.users where email = 'demo.admin@example.com'`);
+  eq(ok.ok, true, 'demo admin password');
+  await db2.close();
+});
+
+// The behaviour tests below run on the optional sample data (seed.sql) so there is something to sell.
+const db = await freshDb({ withSeed: true });
 const ANON = { role: 'anon' };
 const SERVICE = { role: 'service_role' };
 const adminId = (await one(db, `select id from public.profiles where email = 'demo.admin@example.com'`)).id;
@@ -80,16 +100,10 @@ const shopperId = (await one(db, `select id from public.profiles where email = '
 const ADMIN = { role: 'authenticated', sub: adminId };
 const SHOPPER = { role: 'authenticated', sub: shopperId };
 
-await test('all migrations, seed and demo logins apply on a fresh database', async () => {});
-
-await test('full_setup.sql (one-paste version) also applies cleanly', async () => {
-  const db2 = await freshDb({ combined: true });
-  eq(num((await one(db2, 'select count(*) from public.products')).count), 16, 'products');
-  await db2.close();
-});
+await test('migrations + demo logins + optional seed.sql apply on a fresh database', async () => {});
 
 // =============================================================================
-console.log('\nDemo data matches the admin panel');
+console.log('\nOptional sample data (seed.sql) matches the admin panel');
 await test('row counts', async () => {
   const r = await one(db, `select
     (select count(*) from public.products) products, (select count(*) from public.categories) categories,
@@ -131,8 +145,6 @@ await test('demo admin is super admin; demo shopper is a customer', async () => 
   eq((await one(db, `select role from public.profiles where id = $1`, [adminId])).role, 'super_admin');
   eq((await one(db, `select count(*) from public.customers where profile_id = $1`, [shopperId])).count, 1, 'shopper customer');
   eq((await one(db, `select count(*) from public.customers where profile_id = $1`, [adminId])).count, 0, 'admin customer');
-  const ok = await one(db, `select encrypted_password = extensions.crypt('shop123', encrypted_password) ok from auth.users where id = $1`, [adminId]);
-  eq(ok.ok, true, 'password hash');
 });
 
 // =============================================================================
@@ -202,7 +214,7 @@ const cell = async (id, size, color) => (await one(db, `select quantity from pub
 const stockOf = async (id) => (await one(db, `select stock from public.products where id = $1`, [id])).stock;
 
 let codOrder;
-await test('guest COD order: takes exact size/colour stock, applies coupon, adds customer, numbers ORD-98217', async () => {
+await test('guest COD order: takes exact size/colour stock, applies coupon, adds customer, numbers ORD-1001', async () => {
   const before = await cell(ringId, '7', 'Rose Gold');
   const coupon = num((await one(db, `select usage_count from public.coupons where code = 'WELCOME500'`)).usage_count);
   codOrder = await as(db, ANON, () => one(db, `select * from public.place_order($1)`, [{
@@ -211,7 +223,7 @@ await test('guest COD order: takes exact size/colour stock, applies coupon, adds
     address: { name: 'New Buyer', phone: '+91 90000 00000', email: 'New.Buyer@Example.com', line: '1 MG Road', city: 'Bengaluru', state: 'Karnataka', pin: '560001' },
   }]));
   eq([codOrder.order_number, codOrder.subtotal, codOrder.discount, codOrder.delivery_fee, codOrder.total, codOrder.payment_status],
-     ['ORD-98217', '11999.00', '500.00', '0.00', '11499.00', 'Pending']);
+     ['ORD-1001', '11999.00', '500.00', '0.00', '11499.00', 'Pending']);
   eq(await cell(ringId, '7', 'Rose Gold'), before - 1, 'variant stock');
   eq(num((await one(db, `select usage_count from public.coupons where code = 'WELCOME500'`)).usage_count), coupon + 1, 'coupon usage');
   eq((await one(db, `select email from public.customers where id = $1`, [codOrder.customer_id])).email, 'new.buyer@example.com');
@@ -294,7 +306,7 @@ await test('POS sale takes stock from available cells and records where from', a
   posTx = await as(db, ADMIN, () => one(db, `select * from public.pos_create_sale($1)`, [{
     items: [{ product_id: pearlId, qty: 32 }], customer_name: 'Walk-in Customer', payment_method: 'UPI',
   }]));
-  eq(posTx.receipt_no, 'REC-2026-8092');
+  eq(posTx.receipt_no, `REC-${new Date().getFullYear()}-1001`);
   eq([posTx.items_count, posTx.total], [32, '799968.00']);
   eq(await stockOf(pearlId), total - 32);
   const lines = (await one(db, `select stock_lines from public.pos_transaction_items where transaction_id = $1`, [posTx.id])).stock_lines;
@@ -403,7 +415,7 @@ await test('video views can be counted by visitors', async () => {
 });
 
 // =============================================================================
-console.log('\nHand-over to a real client');
+console.log('\nClearing sample data');
 await test('clear_demo_data.sql empties the store but keeps logins, themes and settings row', async () => {
   await db.exec(read('../clear_demo_data.sql'));
   const r = await one(db, `select (select count(*) from public.products) p, (select count(*) from public.orders) o,
@@ -412,7 +424,7 @@ await test('clear_demo_data.sql empties the store but keeps logins, themes and s
   eq([num(r.p), num(r.o), num(r.c), num(r.pr), num(r.t), r.s], [0, 0, 1, 3, 8, 'My Store']);
 });
 
-await test('first real order after clearing is ORD-1001, and the demo can be re-seeded', async () => {
+await test('first real order after clearing is ORD-1001, and the sample data can be loaded again', async () => {
   await db.exec(`insert into public.products (name, sku, price) values ('Test', 'T-1', 100)`);
   const id = (await one(db, `select id from public.products where sku = 'T-1'`)).id;
   await db.query(`select public.set_product_variants($1, '{}', '{}', '{"Standard":{"Standard":5}}')`, [id]);

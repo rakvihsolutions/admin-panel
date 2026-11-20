@@ -18,11 +18,11 @@ import { K, KaavuDetails, KaavuImageUploader, KaavuInventoryRow, KaavuStockField
 // Products, orders, coupons, banners and the rest are shared with the storefront and saved in the browser.
 import {
   useStore, createStore, productsStore, categoriesStore, subCategoriesStore, subSubCategoriesStore, sizeOptionsStore, colorOptionsStore,
-  tagOptionsStore, couponsStore, ordersStore, customersStore, bannersStore, instagramStore, adminAccountStore, videosStore,
+  tagOptionsStore, couponsStore, ordersStore, customersStore, bannersStore, instagramStore, productReviewsStore, testimonialsStore, adminAccountStore, videosStore,
   buildVariantStock, variantSizes, variantColors, stockStatus, couponState, restockOrder, resetDemoData, fakePaymentId, uid,
   localDate, sellInStore, returnToStock, STANDARD, ORDER_STATUSES, DEMO_VIDEO_URL,
   type VariantStock, type Product, type SizeOption, type ColorOption, type TagOption, type Coupon, type Order, type OrderStatus,
-  type HeroBanner, type CategoryItem, type EcommerceVideo, type StockLine, useStoreDetails,
+  type HeroBanner, type CategoryItem, type EcommerceVideo, type StockLine, type ProductReview, type Testimonial, useStoreDetails,
 } from './demo-data';
 
 interface PosCartItem {
@@ -97,7 +97,7 @@ const posHistoryStore = createStore<PosTransaction[]>('demo.admin.posHistory.v5'
 type AdminTab =
   | 'dashboard' | 'add-product' | 'product-list' | 'inventory' | 'attributes'
   | 'category' | 'sub-category' | 'sub-sub-category' | 'coupons' | 'orders' | 'customers'
-  | 'pos-terminal' | 'pos-history' | 'banners' | 'instagram' | 'videos' | 'themes' | 'store-details' | 'reports' | 'settings';
+  | 'pos-terminal' | 'pos-history' | 'banners' | 'instagram' | 'product-reviews' | 'testimonials' | 'videos' | 'themes' | 'store-details' | 'reports' | 'settings';
 
 type DemoSubAdmin = { id: string; name: string; email: string; password: string; permissions: AdminTab[] };
 // Staff logins and product videos are saved in the browser like the rest of the demo data (same keys as before).
@@ -120,6 +120,8 @@ const SUBADMIN_MODULES: { id: AdminTab; label: string; group: string }[] = [
   { id: 'pos-history', label: 'POS history', group: 'POS Terminal' },
   { id: 'banners', label: 'Hero banners', group: 'Storefront' },
   { id: 'instagram', label: 'Instagram feed', group: 'Storefront' },
+  { id: 'product-reviews', label: 'Product reviews', group: 'Reviews' },
+  { id: 'testimonials', label: 'Testimonials', group: 'Reviews' },
   { id: 'videos', label: 'Videos', group: 'Storefront' },
   { id: 'themes', label: 'Theme setup', group: 'Storefront' },
   { id: 'store-details', label: 'Logo, contact & footer', group: 'Storefront' },
@@ -177,6 +179,8 @@ const TAB_TITLES: Record<AdminTab, string> = {
   'pos-history': 'POS History',
   banners: 'Hero Banners',
   instagram: 'Instagram Feed',
+  'product-reviews': 'Product Reviews',
+  testimonials: 'Testimonials',
   videos: 'Videos',
   themes: 'Theme Setup',
   'store-details': 'Store Details',
@@ -235,6 +239,44 @@ function PanelIcon({ name, size = 18 }: { name: 'money' | 'box' | 'tag' | 'warni
   return <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">{paths[name]}</svg>;
 }
 
+/** A single star shape. Filled when `on` is true, outline otherwise. */
+function Star({ on, size = 16 }: { on: boolean; size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={on ? '#F5A623' : 'none'} stroke={on ? '#F5A623' : '#CFD8E3'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+      <polygon points="12 2 15.1 8.6 22 9.3 16.8 14 18.3 21 12 17.3 5.7 21 7.2 14 2 9.3 8.9 8.6 12 2" />
+    </svg>
+  );
+}
+
+/** Read-only row of 5 stars. */
+function StarRating({ value, size = 16 }: { value: number; size?: number }) {
+  return (
+    <span className="inline-flex items-center gap-0.5" aria-label={`${value} out of 5 stars`}>
+      {[1, 2, 3, 4, 5].map((n) => <Star key={n} on={n <= Math.round(value)} size={size} />)}
+    </span>
+  );
+}
+
+/** Clickable row of 5 stars for choosing a rating. */
+function StarPicker({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+  return (
+    <div className="inline-flex items-center gap-1.5" role="radiogroup" aria-label="Rating">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <button key={n} type="button" role="radio" aria-checked={value === n} aria-label={`${n} star${n === 1 ? '' : 's'}`} onClick={() => onChange(n)} className="transition-transform hover:scale-110">
+          <Star on={n <= value} size={30} />
+        </button>
+      ))}
+    </div>
+  );
+}
+
+const reviewStatusStyle = (status: ProductReview['status']) =>
+  status === 'Approved'
+    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+    : status === 'Rejected'
+      ? 'bg-red-50 text-red-700 border-red-200'
+      : 'bg-amber-50 text-amber-700 border-amber-200';
+
 const orderStatusStyle = (status: OrderStatus) =>
   status === 'Delivered'
     ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
@@ -275,6 +317,7 @@ export default function EcommerceAdminPanel() {
   const [isPosDropdownOpen, setIsPosDropdownOpen] = useState(false);
   const [isCategoriesDropdownOpen, setIsCategoriesDropdownOpen] = useState(false);
   const [isStorefrontDropdownOpen, setIsStorefrontDropdownOpen] = useState(false);
+  const [isReviewsDropdownOpen, setIsReviewsDropdownOpen] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [adminToast, setAdminToast] = useState<{ id: string; text: string } | null>(null);
 
@@ -424,6 +467,19 @@ export default function EcommerceAdminPanel() {
   const [newIgUrl, setNewIgUrl] = useState('');
   const [newIgImage, setNewIgImage] = useState('');
   const [newIgCaption, setNewIgCaption] = useState('');
+
+  // Product Reviews State
+  const productReviews = useStore(productReviewsStore);
+  const setProductReviews = productReviewsStore.set;
+  const [reviewStatusFilter, setReviewStatusFilter] = useState<'All' | ProductReview['status']>('All');
+  const [reviewRatingFilter, setReviewRatingFilter] = useState<0 | 1 | 2 | 3 | 4 | 5>(0);
+  const [reviewSearch, setReviewSearch] = useState('');
+
+  // Testimonials State
+  const testimonials = useStore(testimonialsStore);
+  const setTestimonials = testimonialsStore.set;
+  const [isTestimonialModalOpen, setIsTestimonialModalOpen] = useState(false);
+  const [testimonialDraft, setTestimonialDraft] = useState<Testimonial | null>(null);
 
   // Admin Security State
   const [secCurrentPassword, setSecCurrentPassword] = useState('');
@@ -1570,6 +1626,44 @@ export default function EcommerceAdminPanel() {
                   {([
                     { id: 'banners', label: 'Hero Banners', count: banners.length, icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg> },
                     { id: 'instagram', label: 'Instagram Feed', count: instagramPosts.length, icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5" /><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" /><line x1="17.5" y1="6.5" x2="17.51" y2="6.5" /></svg> },
+                  ] satisfies { id: AdminTab; label: string; count: number; icon: React.ReactNode }[]).filter((item) => canSeeAdminTab(item.id)).map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => { setActiveTab(item.id); setIsMobileSidebarOpen(false); }}
+                      className={`w-full text-left px-4 py-2.5 rounded-full text-[13px] transition-all flex items-center justify-between ${activeTab === item.id
+                        ? 'bg-gradient-to-r from-[#2F6BFF] to-[#5A8BFF] text-white font-bold shadow-sm'
+                        : 'text-[#A9B4C2] font-semibold hover:bg-white/[0.06] hover:text-white'
+                        }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className="w-4 h-4 flex items-center justify-center opacity-70">{item.icon}</span>
+                        <span>{item.label}</span>
+                      </div>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-extrabold ${activeTab === item.id ? 'bg-white/20 text-white' : 'bg-white/[0.08] text-[#C9D2DD]'}`}>{item.count}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>}
+
+            {/* Reviews Dropdown */}
+            {(['product-reviews', 'testimonials'] as AdminTab[]).some(canSeeAdminTab) && <div className="space-y-1">
+              <button
+                onClick={() => setIsReviewsDropdownOpen(!isReviewsDropdownOpen)}
+                className="w-full text-left px-5 py-3 rounded-full text-[#F6F8FB] font-bold hover:bg-white/[0.06] transition-all flex justify-between items-center"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="w-5 h-5 flex items-center justify-center opacity-70"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.1 8.6 22 9.3 16.8 14 18.3 21 12 17.3 5.7 21 7.2 14 2 9.3 8.9 8.6 12 2" /></svg></span>
+                  <span>Reviews</span>
+                </div>
+                <span className={`text-[12px] text-[#6F7E92] transition-transform duration-200 ${isReviewsDropdownOpen ? 'rotate-180' : ''}`}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg></span>
+              </button>
+
+              {isReviewsDropdownOpen && (
+                <div className="pl-6 space-y-1 pt-1 border-l-2 border-white/[0.08] ml-5">
+                  {([
+                    { id: 'product-reviews', label: 'Product Reviews', count: productReviews.length, icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.1 8.6 22 9.3 16.8 14 18.3 21 12 17.3 5.7 21 7.2 14 2 9.3 8.9 8.6 12 2" /></svg> },
+                    { id: 'testimonials', label: 'Testimonials', count: testimonials.length, icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg> },
                   ] satisfies { id: AdminTab; label: string; count: number; icon: React.ReactNode }[]).filter((item) => canSeeAdminTab(item.id)).map((item) => (
                     <button
                       key={item.id}
@@ -4099,6 +4193,173 @@ export default function EcommerceAdminPanel() {
             </div>
           )}
 
+          {/* ========================================================================= */}
+          {/* PRODUCT REVIEWS TAB */}
+          {/* ========================================================================= */}
+          {activeTab === 'product-reviews' && (() => {
+            const total = productReviews.length;
+            const approved = productReviews.filter((r) => r.status === 'Approved').length;
+            const pending = productReviews.filter((r) => r.status === 'Pending').length;
+            const avg = total ? productReviews.reduce((s, r) => s + r.rating, 0) / total : 0;
+            const starCounts = [5, 4, 3, 2, 1].map((star) => ({ star, count: productReviews.filter((r) => r.rating === star).length }));
+            const filtered = productReviews.filter((r) =>
+              (reviewStatusFilter === 'All' || r.status === reviewStatusFilter)
+              && (reviewRatingFilter === 0 || r.rating === reviewRatingFilter)
+              && (!reviewSearch.trim() || `${r.productName} ${r.customerName} ${r.title} ${r.comment}`.toLowerCase().includes(reviewSearch.trim().toLowerCase()))
+            );
+            const setStatus = (id: string, status: ProductReview['status']) => {
+              setProductReviews(productReviews.map((r) => (r.id === id ? { ...r, status } : r)));
+              notify(status === 'Approved' ? 'Review approved' : status === 'Rejected' ? 'Review rejected' : 'Review moved to pending');
+            };
+            return (
+              <div className="space-y-6">
+                {/* Summary */}
+                <div className="bg-white p-6 rounded-[28px] border border-[#E3E8EF] shadow-sm">
+                  <div className="flex flex-col lg:flex-row gap-6 lg:items-center">
+                    <div className="flex items-center gap-5 lg:border-r lg:border-[#E3E8EF] lg:pr-8">
+                      <div className="text-center">
+                        <p className="text-5xl font-black tracking-tight text-[#0E1A2B] leading-none">{avg.toFixed(1)}</p>
+                        <div className="mt-2 flex justify-center"><StarRating value={avg} size={18} /></div>
+                        <p className="mt-1.5 text-[12px] font-semibold text-[#6F7E92]">{total} review{total === 1 ? '' : 's'}</p>
+                      </div>
+                      <div className="w-44 space-y-1">
+                        {starCounts.map(({ star, count }) => (
+                          <div key={star} className="flex items-center gap-2 text-[11px] font-bold text-[#6F7E92]">
+                            <span className="w-3 text-right">{star}</span>
+                            <Star on size={11} />
+                            <span className="flex-1 h-1.5 rounded-full bg-[#EEF2F7] overflow-hidden"><span className="block h-full bg-[#F5A623]" style={{ width: `${total ? (count / total) * 100 : 0}%` }} /></span>
+                            <span className="w-5 text-right text-[#0E1A2B]">{count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4 flex-1">
+                      {[
+                        { label: 'Approved', value: approved, tone: 'text-emerald-600' },
+                        { label: 'Pending', value: pending, tone: 'text-amber-600' },
+                        { label: 'Avg. Rating', value: avg.toFixed(1), tone: 'text-[#2F6BFF]' },
+                      ].map((s) => (
+                        <div key={s.label} className="rounded-2xl bg-[#F6F8FB] border border-[#E3E8EF] p-4 text-center">
+                          <p className={`text-2xl font-black ${s.tone}`}>{s.value}</p>
+                          <p className="mt-1 text-[11px] font-extrabold uppercase tracking-wider text-[#6F7E92]">{s.label}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Filters */}
+                <div className="bg-white p-4 rounded-[24px] border border-[#E3E8EF] shadow-sm flex flex-col lg:flex-row gap-3 lg:items-center">
+                  <div className="flex flex-wrap gap-2">
+                    {(['All', 'Pending', 'Approved', 'Rejected'] as const).map((s) => (
+                      <button key={s} onClick={() => setReviewStatusFilter(s)} className={`px-4 py-2 rounded-full text-[12px] font-extrabold transition-all ${reviewStatusFilter === s ? 'bg-[#0E1A2B] text-white' : 'bg-[#F3F6FA] text-[#5B6B80] hover:bg-[#E8EDF3]'}`}>
+                        {s}{s !== 'All' && <span className="ml-1.5 opacity-70">{productReviews.filter((r) => r.status === s).length}</span>}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-2 lg:ml-auto items-center">
+                    <select aria-label="Filter by rating" value={reviewRatingFilter} onChange={(e) => setReviewRatingFilter(Number(e.target.value) as 0 | 1 | 2 | 3 | 4 | 5)} className="px-3 py-2 rounded-full bg-[#F3F6FA] border border-[#E3E8EF] text-[12px] font-bold text-[#0E1A2B] outline-none focus:border-[#2F6BFF]">
+                      <option value={0}>All ratings</option>
+                      {[5, 4, 3, 2, 1].map((n) => <option key={n} value={n}>{n} star{n === 1 ? '' : 's'}</option>)}
+                    </select>
+                    <input value={reviewSearch} onChange={(e) => setReviewSearch(e.target.value)} placeholder="Search reviews…" aria-label="Search reviews" className="px-4 py-2 rounded-full bg-[#F3F6FA] border border-[#E3E8EF] text-[12px] font-semibold text-[#0E1A2B] outline-none focus:border-[#2F6BFF] w-full sm:w-56" />
+                  </div>
+                </div>
+
+                {/* List */}
+                {filtered.length === 0 ? (
+                  <div className="bg-white border border-dashed border-[#CFD8E3] rounded-[32px] p-12 text-center text-[13px] font-semibold text-[#6F7E92]">
+                    No reviews match these filters.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {filtered.map((r) => (
+                      <div key={r.id} className="bg-white border border-[#E3E8EF] rounded-[24px] shadow-sm p-5 flex flex-col sm:flex-row gap-4">
+                        <div className="flex sm:flex-col items-center sm:items-start gap-3 sm:w-28 shrink-0">
+                          <img src={r.productImage || DEFAULT_PRODUCT_IMAGE} alt={r.productName} className="w-16 h-16 rounded-xl object-cover bg-[#F3F6FA]" />
+                          <p className="text-[11px] font-bold text-[#0E1A2B] leading-tight line-clamp-2">{r.productName}</p>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2.5">
+                            <StarRating value={r.rating} size={15} />
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide border ${reviewStatusStyle(r.status)}`}>{r.status}</span>
+                            {r.verifiedPurchase && <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-[#EAF1FF] text-[#2F6BFF]"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>Verified</span>}
+                          </div>
+                          <p className="mt-2 text-[14px] font-extrabold text-[#0E1A2B]">{r.title}</p>
+                          <p className="mt-1 text-[13px] text-[#5B6B80] leading-relaxed">{r.comment}</p>
+                          <p className="mt-2.5 text-[11.5px] font-semibold text-[#8A96A5]">
+                            {r.customerName}{r.customerEmail && <span className="text-[#B6BFCB]"> · {r.customerEmail}</span>} · {r.date} · {r.helpfulCount} found helpful
+                          </p>
+                        </div>
+                        <div className="flex sm:flex-col gap-2 sm:w-32 shrink-0 sm:justify-center">
+                          {r.status !== 'Approved' && <button onClick={() => setStatus(r.id, 'Approved')} className="flex-1 px-3 py-2 rounded-full bg-emerald-50 text-emerald-700 text-[12px] font-extrabold hover:bg-emerald-100 transition-colors">Approve</button>}
+                          {r.status !== 'Rejected' && <button onClick={() => setStatus(r.id, 'Rejected')} className="flex-1 px-3 py-2 rounded-full bg-red-50 text-red-600 text-[12px] font-extrabold hover:bg-red-100 transition-colors">Reject</button>}
+                          {r.status !== 'Pending' && <button onClick={() => setStatus(r.id, 'Pending')} className="flex-1 px-3 py-2 rounded-full bg-amber-50 text-amber-700 text-[12px] font-extrabold hover:bg-amber-100 transition-colors">Pending</button>}
+                          <button onClick={() => { if (confirm('Delete this review permanently?')) { setProductReviews(productReviews.filter((x) => x.id !== r.id)); notify('Review deleted'); } }} className="flex-1 px-3 py-2 rounded-full bg-[#F3F6FA] text-[#6F7E92] text-[12px] font-extrabold hover:bg-[#E8EDF3] transition-colors">Delete</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* ========================================================================= */}
+          {/* TESTIMONIALS TAB */}
+          {/* ========================================================================= */}
+          {activeTab === 'testimonials' && (
+            <div className="space-y-6">
+              <div className="bg-white p-6 rounded-[28px] border border-[#E3E8EF] shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <h3 className="text-xl font-bold tracking-tight text-[#0E1A2B]">Testimonials</h3>
+                  <p className="text-[13px] text-[#6F7E92] font-semibold">Star-rated customer quotes shown in the &quot;What our customers say&quot; section of the storefront. {testimonials.filter((t) => t.isFeatured).length} featured on home.</p>
+                </div>
+                <button
+                  onClick={() => { setTestimonialDraft({ id: '', name: '', role: 'Verified Buyer', avatar: '', rating: 5, quote: '', date: localDate(), isFeatured: true }); setIsTestimonialModalOpen(true); }}
+                  className="px-6 py-2.5 bg-gradient-to-r from-[#2F6BFF] to-[#5A8BFF] text-white rounded-full text-[13px] font-extrabold shadow-md hover:shadow-lg transition-all flex items-center gap-2"
+                >
+                  <PanelIcon name="plus" size={16} />
+                  <span>Add Testimonial</span>
+                </button>
+              </div>
+
+              {testimonials.length === 0 ? (
+                <div className="bg-white border border-dashed border-[#CFD8E3] rounded-[32px] p-12 text-center text-[13px] font-semibold text-[#6F7E92]">
+                  No testimonials yet. Add your first one to show it on the storefront.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {testimonials.map((t) => (
+                    <div key={t.id} className={`relative bg-white border rounded-[28px] shadow-sm p-6 flex flex-col gap-4 transition-all hover:shadow-md ${t.isFeatured ? 'border-[#2F6BFF]/40 ring-1 ring-[#2F6BFF]/10' : 'border-[#E3E8EF]'}`}>
+                      {t.isFeatured && <span className="absolute top-5 right-5 px-2.5 py-0.5 rounded-full bg-[#EAF1FF] text-[#2F6BFF] text-[10px] font-extrabold uppercase tracking-wide">Featured</span>}
+                      <div className="flex items-center gap-3">
+                        {t.avatar
+                          ? <img src={t.avatar} alt={t.name} className="w-12 h-12 rounded-full object-cover bg-[#F3F6FA]" />
+                          : <span className="w-12 h-12 rounded-full bg-gradient-to-br from-[#2F6BFF] to-[#5A8BFF] text-white flex items-center justify-center font-black text-[15px]">{t.name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase() || '?'}</span>}
+                        <div className="min-w-0">
+                          <p className="font-extrabold text-[#0E1A2B] text-[14px] truncate">{t.name || 'Unnamed'}</p>
+                          <p className="text-[11.5px] font-semibold text-[#6F7E92] truncate">{t.role}</p>
+                        </div>
+                      </div>
+                      <StarRating value={t.rating} size={16} />
+                      <p className="text-[13.5px] text-[#4A5A6E] leading-relaxed italic flex-1">&ldquo;{t.quote}&rdquo;</p>
+                      <div className="flex items-center justify-between pt-3 border-t border-[#E3E8EF]">
+                        <button onClick={() => setTestimonials(testimonials.map((x) => (x.id === t.id ? { ...x, isFeatured: !x.isFeatured } : x)))} className={`text-[11.5px] font-extrabold ${t.isFeatured ? 'text-[#2F6BFF]' : 'text-[#6F7E92] hover:text-[#2F6BFF]'}`}>
+                          {t.isFeatured ? '★ Featured on home' : '☆ Show on home'}
+                        </button>
+                        <div className="flex gap-3">
+                          <button onClick={() => { setTestimonialDraft(t); setIsTestimonialModalOpen(true); }} className="text-[12px] font-bold text-[#2F6BFF] hover:underline">Edit</button>
+                          <button onClick={() => { if (confirm(`Delete the testimonial from ${t.name}?`)) { setTestimonials(testimonials.filter((x) => x.id !== t.id)); notify('Testimonial deleted'); } }} className="text-[12px] font-bold text-red-500 hover:text-red-700">Delete</button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {activeTab === 'themes' && <ThemeSetup notify={notify} />}
           {activeTab === 'store-details' && <StoreDetailsSettings notify={notify} />}
 
@@ -5615,6 +5876,66 @@ export default function EcommerceAdminPanel() {
               >
                 Cancel
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: ADD / EDIT TESTIMONIAL */}
+      {/* ========================================================================= */}
+      {isTestimonialModalOpen && testimonialDraft && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-[#E3E8EF] rounded-[36px] p-8 max-w-md w-full shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center">
+              <h3 className="text-xl font-bold text-[#0E1A2B]">{testimonialDraft.id ? 'Edit Testimonial' : 'Add Testimonial'}</h3>
+              <button onClick={() => { setIsTestimonialModalOpen(false); setTestimonialDraft(null); }} className="w-8 h-8 rounded-full bg-[#F3F6FA] hover:bg-[#E3E8EF] flex items-center justify-center text-sm font-bold">✕</button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex flex-col items-center gap-2">
+                <label className="block text-[11px] font-extrabold uppercase text-[#6F7E92]">Rating *</label>
+                <StarPicker value={testimonialDraft.rating} onChange={(rating) => setTestimonialDraft({ ...testimonialDraft, rating })} />
+              </div>
+              <div>
+                <label className="block text-[11px] font-extrabold uppercase text-[#6F7E92] mb-1 pl-2">Customer Name *</label>
+                <input placeholder="e.g. Shreya Iyer" value={testimonialDraft.name} onChange={(e) => setTestimonialDraft({ ...testimonialDraft, name: e.target.value })} className="w-full px-5 py-3 bg-[#F3F6FA] border border-[#E3E8EF] rounded-full text-[13px] font-semibold text-[#0E1A2B]" />
+              </div>
+              <div>
+                <label className="block text-[11px] font-extrabold uppercase text-[#6F7E92] mb-1 pl-2">Role / Location</label>
+                <input placeholder="e.g. Verified Buyer · Bengaluru" value={testimonialDraft.role} onChange={(e) => setTestimonialDraft({ ...testimonialDraft, role: e.target.value })} className="w-full px-5 py-3 bg-[#F3F6FA] border border-[#E3E8EF] rounded-full text-[13px] font-semibold text-[#0E1A2B]" />
+              </div>
+              <div>
+                <label className="block text-[11px] font-extrabold uppercase text-[#6F7E92] mb-1 pl-2">Testimonial *</label>
+                <textarea rows={4} placeholder="What did the customer say about their experience?" value={testimonialDraft.quote} onChange={(e) => setTestimonialDraft({ ...testimonialDraft, quote: e.target.value })} className="w-full px-5 py-3 bg-[#F3F6FA] border border-[#E3E8EF] rounded-[20px] text-[13px] font-semibold text-[#0E1A2B] resize-none" />
+              </div>
+              <div>
+                <label className="block text-[11px] font-extrabold uppercase text-[#6F7E92] mb-1 pl-2">Photo (optional)</label>
+                <ImageListField images={testimonialDraft.avatar ? [testimonialDraft.avatar] : []} onChange={(images) => setTestimonialDraft({ ...testimonialDraft, avatar: images[images.length - 1] ?? '' })} label="Customer photo" showCover={false} />
+                <p className="mt-1.5 text-[11px] text-[#8A96A5] pl-2">Leave empty to show the customer&apos;s initials.</p>
+              </div>
+              <label className="flex items-center gap-2.5 rounded-xl bg-[#F6F8FB] px-4 py-3 text-[13px] font-semibold cursor-pointer">
+                <input type="checkbox" checked={testimonialDraft.isFeatured} onChange={(e) => setTestimonialDraft({ ...testimonialDraft, isFeatured: e.target.checked })} className="accent-[#2F6BFF] w-4 h-4" />
+                Feature on the storefront home page
+              </label>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  const name = testimonialDraft.name.trim();
+                  const quote = testimonialDraft.quote.trim();
+                  if (!name || !quote) return notify('Add a name and testimonial first');
+                  const clean: Testimonial = { ...testimonialDraft, name, role: testimonialDraft.role.trim(), quote };
+                  if (clean.id) { setTestimonials(testimonials.map((t) => (t.id === clean.id ? clean : t))); notify('Testimonial updated'); }
+                  else { setTestimonials([...testimonials, { ...clean, id: uid('tst') }]); notify('Testimonial added'); }
+                  setIsTestimonialModalOpen(false); setTestimonialDraft(null);
+                }}
+                className="flex-1 py-3.5 bg-gradient-to-r from-[#2F6BFF] to-[#5A8BFF] text-white font-extrabold text-[13px] rounded-full shadow-md"
+              >
+                {testimonialDraft.id ? 'Save Changes' : 'Add Testimonial'}
+              </button>
+              <button onClick={() => { setIsTestimonialModalOpen(false); setTestimonialDraft(null); }} className="px-6 py-3.5 bg-white border border-[#E3E8EF] hover:bg-[#F3F6FA] text-[#5B6B80] font-bold text-[13px] rounded-full">Cancel</button>
             </div>
           </div>
         </div>

@@ -234,6 +234,35 @@ export interface InstagramPost {
   caption: string;
 }
 
+/** A star rating a shopper left on a product. Admin moderates these (approve / reject) before they show on the storefront. */
+export interface ProductReview {
+  id: string;
+  productId: string;
+  productName: string;
+  productImage: string;
+  customerName: string;
+  customerEmail: string;
+  rating: number;            // 1–5 stars
+  title: string;
+  comment: string;
+  date: string;              // YYYY-MM-DD
+  status: 'Pending' | 'Approved' | 'Rejected';
+  verifiedPurchase: boolean;
+  helpfulCount: number;
+}
+
+/** A star-rated testimonial shown in the "What our customers say" section of the storefront home. */
+export interface Testimonial {
+  id: string;
+  name: string;
+  role: string;              // e.g. "Verified Buyer · Mumbai"
+  avatar: string;            // image URL, or '' to show initials
+  rating: number;            // 1–5 stars
+  quote: string;
+  date: string;              // YYYY-MM-DD
+  isFeatured: boolean;       // shown on the storefront home page
+}
+
 /** A storefront shopper who signed up. Demo only: the password is kept as plain text in this browser. */
 export interface ShopperAccount {
   id: string;
@@ -851,6 +880,22 @@ const SEED_INSTAGRAM: InstagramPost[] = [
   { id: 'ig-6', postUrl: 'https://instagram.com/demojewellery', imageUrl: U(PHOTOS.gemRings, 600), caption: 'Colour that catches the light. #Rings' },
 ];
 
+const SEED_PRODUCT_REVIEWS: ProductReview[] = [
+  { id: 'rev-1', productId: '', productName: 'Ziya Polki Choker Set', productImage: U(PHOTOS.templeNecklace, 300), customerName: 'Ananya Rao', customerEmail: 'ananya.rao@example.com', rating: 5, title: 'Absolutely stunning in person', comment: 'The polki work is even more beautiful than the photos. Wore it for my sister’s wedding and got so many compliments. Felt premium and well packed.', date: '2026-11-14', status: 'Approved', verifiedPurchase: true, helpfulCount: 24 },
+  { id: 'rev-2', productId: '', productName: 'Layered Gold Chain Necklace', productImage: U(PHOTOS.layeredNecklaces, 300), customerName: 'Meera Krishnan', customerEmail: 'meera.k@example.com', rating: 4, title: 'Lovely everyday piece', comment: 'Delicate and light, perfect for daily wear. Took a star off only because the clasp is a little fiddly, but the gold finish is gorgeous.', date: '2026-11-10', status: 'Approved', verifiedPurchase: true, helpfulCount: 11 },
+  { id: 'rev-3', productId: '', productName: 'Twisted Gold Hoops', productImage: U(PHOTOS.twistedHoops, 300), customerName: 'Priya Sharma', customerEmail: 'priya.sharma@example.com', rating: 5, title: 'My new favourite hoops', comment: 'Lightweight, great for long days, and they go with everything. Delivery was quick too.', date: '2026-11-08', status: 'Pending', verifiedPurchase: true, helpfulCount: 0 },
+  { id: 'rev-4', productId: '', productName: 'Solitaire Diamond Ring', productImage: U(PHOTOS.solitaire, 300), customerName: 'Rahul Verma', customerEmail: 'rahul.verma@example.com', rating: 3, title: 'Beautiful but smaller than expected', comment: 'The ring is elegant and sparkles well, but the stone looked bigger in the listing images. Still happy overall with the craftsmanship.', date: '2026-11-05', status: 'Pending', verifiedPurchase: false, helpfulCount: 2 },
+  { id: 'rev-5', productId: '', productName: 'Kundan Temple Earrings', productImage: U(PHOTOS.kundanStuds, 300), customerName: 'Divya Nair', customerEmail: 'divya.nair@example.com', rating: 5, title: 'Heirloom quality', comment: 'Rich, detailed and surprisingly comfortable to wear for hours. Exactly what I wanted for the festive season.', date: '2026-11-02', status: 'Approved', verifiedPurchase: true, helpfulCount: 17 },
+  { id: 'rev-6', productId: '', productName: 'Rose Gold Pendant', productImage: U(PHOTOS.roseGoldPendant, 300), customerName: 'Anonymous', customerEmail: '', rating: 1, title: 'Not what I ordered', comment: 'Received a different colour than shown. Raising this with support.', date: '2026-10-29', status: 'Rejected', verifiedPurchase: false, helpfulCount: 0 },
+];
+
+const SEED_TESTIMONIALS: Testimonial[] = [
+  { id: 'tst-1', name: 'Shreya Iyer', role: 'Verified Buyer · Bengaluru', avatar: '', rating: 5, quote: 'From browsing to delivery, the whole experience felt premium. The jewellery arrived in beautiful packaging and the quality is genuinely heirloom-grade.', date: '2026-11-12', isFeatured: true },
+  { id: 'tst-2', name: 'Karthik Menon', role: 'Verified Buyer · Chennai', avatar: '', rating: 5, quote: 'Bought a bridal set for my wife and she was overjoyed. The craftsmanship is exceptional and customer support helped me pick the right piece.', date: '2026-11-07', isFeatured: true },
+  { id: 'tst-3', name: 'Nisha Patel', role: 'Verified Buyer · Ahmedabad', avatar: '', rating: 4, quote: 'Gorgeous designs at fair prices. Delivery was a day late but the piece more than made up for it. Will definitely shop again.', date: '2026-11-01', isFeatured: true },
+  { id: 'tst-4', name: 'Aisha Khan', role: 'Verified Buyer · Hyderabad', avatar: '', rating: 5, quote: 'I’ve ordered three times now and every piece has been flawless. This is my go-to store for gifting.', date: '2026-10-24', isFeatured: false },
+];
+
 // =============================================================================
 // Shared Stores
 // =============================================================================
@@ -874,6 +919,8 @@ export const ordersStore = createStore<Order[]>(CATALOG_KEY('orders'), [], Array
 export const customersStore = createStore<Customer[]>(CATALOG_KEY('customers'), [], Array.isArray);
 export const bannersStore = createStore<HeroBanner[]>(CATALOG_KEY('banners'), [], Array.isArray);
 export const instagramStore = createStore<InstagramPost[]>(CATALOG_KEY('instagram'), [], Array.isArray);
+export const productReviewsStore = createStore<ProductReview[]>(CATALOG_KEY('productReviews'), SEED_PRODUCT_REVIEWS, Array.isArray);
+export const testimonialsStore = createStore<Testimonial[]>(CATALOG_KEY('testimonials'), SEED_TESTIMONIALS, Array.isArray);
 // Product videos made in Admin → Videos and shown on the storefront (same storage key as before).
 export interface EcommerceVideo {
   id: string;
@@ -934,7 +981,7 @@ export const SAMPLE_DATA = {
   products: SEED_PRODUCTS_ALL, categories: SEED_CATEGORIES, subCategories: SEED_SUB_CATEGORIES,
   subSubCategories: SEED_SUB_SUB_CATEGORIES, sizes: SEED_SIZES, colors: SEED_COLORS, tags: SEED_TAGS,
   coupons: SEED_COUPONS, orders: SEED_ORDERS, customers: SEED_CUSTOMERS, banners: SEED_BANNERS,
-  instagram: SEED_INSTAGRAM, videos: SEED_VIDEOS,
+  instagram: SEED_INSTAGRAM, videos: SEED_VIDEOS, productReviews: SEED_PRODUCT_REVIEWS, testimonials: SEED_TESTIMONIALS,
 };
 
 /** The link to actually play: a YouTube embed, or the file URL (with the dead sample link swapped out). */
@@ -1097,7 +1144,7 @@ export function useStoreDetails(): StoreDetails {
 
 const SHARED_STORES = [
   productsStore, categoriesStore, subCategoriesStore, subSubCategoriesStore, sizeOptionsStore, colorOptionsStore,
-  tagOptionsStore, couponsStore, ordersStore, customersStore, bannersStore, instagramStore, adminAccountStore, shopperAccountsStore, videosStore, paymentGatewayStore,
+  tagOptionsStore, couponsStore, ordersStore, customersStore, bannersStore, instagramStore, productReviewsStore, testimonialsStore, adminAccountStore, shopperAccountsStore, videosStore, paymentGatewayStore,
   themeSettingsStore, storeDetailsStore,
 ];
 
